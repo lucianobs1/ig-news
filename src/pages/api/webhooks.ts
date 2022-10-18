@@ -21,9 +21,9 @@ export const config = {
 };
 
 const relevantEvents = new Set([
-  'checkout.sessions.completed',
-  'customer.subscriptions.updated',
-  'customer.subscriptions.deleted',
+  'checkout.session.completed',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
 ]);
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
@@ -45,7 +45,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
     const { type } = event;
 
-    if (!relevantEvents.has(type)) {
+    if (relevantEvents.has(type)) {
       try {
         switch (type) {
           case 'customer.subscription.updated':
