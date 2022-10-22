@@ -1,8 +1,8 @@
-import NextAuth from 'next-auth/next';
 import { query as q } from 'faunadb';
+import NextAuth from 'next-auth';
 import GitHubProvider from 'next-auth/providers/github';
+
 import { fauna } from '../../../services/fauna';
-import { FaunaAdapter } from '@next-auth/fauna-adapter';
 
 export default NextAuth({
   providers: [
@@ -12,8 +12,42 @@ export default NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile, credentials }) {
+    async session({ session }) {
+      try {
+        const activeSubscription = await fauna.query(
+          q.Get(
+            q.Intersection([
+              q.Match(
+                q.Index('subscription_by_user_ref'),
+                q.Select(
+                  'ref',
+                  q.Get(
+                    q.Match(
+                      q.Index('user_by_email'),
+                      q.Casefold(session.user.email)
+                    )
+                  )
+                )
+              ),
+              q.Match(q.Index('subscription_by_status'), 'active'),
+            ])
+          )
+        );
+
+        return {
+          ...session,
+          activeSubscription,
+        };
+      } catch {
+        return {
+          ...session,
+          activeSubscription: false,
+        };
+      }
+    },
+    async signIn({ user, account, profile }) {
       const { email } = user;
+
       try {
         await fauna.query(
           q.If(
@@ -35,5 +69,4 @@ export default NextAuth({
       }
     },
   },
-  secret: process.env.NEXTAUTH_URL,
 });
